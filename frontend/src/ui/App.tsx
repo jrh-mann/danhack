@@ -57,6 +57,12 @@ export function App() {
     sendJson(payload);
   };
 
+  const handleClearChat = () => {
+    setMessages([]);
+    // Send clear message to backend
+    sendJson({ type: "clear" });
+  };
+
   const updateSlider = (id: string, value: number) => {
     setState((s) => ({
       ...s,
@@ -70,6 +76,13 @@ export function App() {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="font-semibold">Chatbot</div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleClearChat}
+              className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800"
+              title="Clear conversation"
+            >
+              Clear Chat
+            </button>
             <div className="text-xs text-gray-600 dark:text-gray-400">
               <span className={"inline-block w-2 h-2 rounded-full mr-2 " + (isOpen ? "bg-indigo-500" : "bg-gray-400")}></span>
               {isOpen ? "Connected" : "Disconnected"}
@@ -84,6 +97,7 @@ export function App() {
           <ChatWindow
             messages={messages}
             onSend={handleSendChat}
+            onClear={handleClearChat}
             isConnected={isOpen}
             isGenerating={isGenerating}
             state={state}

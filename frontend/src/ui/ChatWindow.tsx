@@ -7,13 +7,14 @@ import { AppState, ChatMessage } from "../types";
 type Props = {
   messages: ChatMessage[];
   onSend: (text: string) => void;
+  onClear: () => void;
   isConnected: boolean;
   isGenerating: boolean;
   state: AppState;
   onUpdateSlider: (id: string, value: number) => void;
 };
 
-export function ChatWindow({ messages, onSend, isConnected, isGenerating }: Props) {
+export function ChatWindow({ messages, onSend, onClear, isConnected, isGenerating }: Props) {
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
 

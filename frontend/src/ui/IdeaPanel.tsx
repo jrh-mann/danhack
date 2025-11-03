@@ -40,9 +40,21 @@ export function IdeaPanel({ state, onSubmitIdea, onUpdateSlider }: Props) {
           )}
           {state.sliders.map((s) => (
             <div key={s.id} className="rounded-lg border border-gray-200 dark:border-neutral-800 p-3">
-              <div className="flex justify-between mb-1 text-sm">
+              <div className="flex justify-between items-center mb-2 text-sm">
                 <div className="font-medium">{s.label}</div>
-                <div className="text-gray-500 dark:text-gray-400">{s.value.toFixed(2)}</div>
+                <input
+                  type="number"
+                  step={s.step}
+                  value={s.value.toFixed(2)}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) {
+                      onUpdateSlider(s.id, val);
+                    }
+                  }}
+                  className="w-24 px-2 py-1 text-xs rounded border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="Any value"
+                />
               </div>
               <input
                 type="range"

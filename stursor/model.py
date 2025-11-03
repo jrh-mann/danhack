@@ -247,6 +247,7 @@ class Model:
             with self.model.trace(prompts) as trace:
                 # Qwen3 architecture: model.layers[i]
                 for layer in layer_names:
-                    activations.append(self.model._model.model.layers[layer].output.save())
+                    print(self.model.model.layers[layer])
+                    activations.append(self.model.model.layers[layer].output.save())
                 
         return activations
