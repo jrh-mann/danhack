@@ -47,7 +47,7 @@ class SteeringServer:
         """Create steering vectors from user idea (multi-layer), return slider spec"""
         slider_id = str(uuid.uuid4())
         # Use multiple layers for stronger, more robust steering
-        layers = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28]  # Spread across middle-to-upper layers
+        layers = [10, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]  # Spread across middle-to-upper layers
         
         print(f"🎯 Creating steering vectors for: '{idea}' (layers: {layers})")
         
@@ -60,8 +60,8 @@ class SteeringServer:
                 model=self.model,
                 api_client=self.api_client,
                 layers=layers,  # Multi-layer
-                n_examples=4,  # Fewer examples for faster generation
-                api_model="openai/gpt-4o-mini",
+                n_examples=8,  # Fewer examples for faster generation
+                api_model="qwen/qwen3-235b-a22b-2507",
                 verbose=True
             )
         )
@@ -79,8 +79,8 @@ class SteeringServer:
         return {
             "id": slider_id,
             "label": idea[:50],
-            "min": -50.0,  # Slider range (for UI convenience)
-            "max": 50.0,
+            "min": -25.0,  # Slider range (for UI convenience)
+            "max": 25.0,
             "step": 0.5,
             "value": 0.0  # Start at zero (neutral)
         }
@@ -136,7 +136,7 @@ class SteeringServer:
             # Generate
             output_ids = self.model.model._model.generate(
                 **inputs,
-                max_new_tokens=100,
+                max_new_tokens=256,
                 do_sample=True,
                 temperature=0.7,
                 top_p=0.9

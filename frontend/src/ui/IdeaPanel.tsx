@@ -5,9 +5,10 @@ type Props = {
   state: AppState;
   onSubmitIdea: (idea: string) => void;
   onUpdateSlider: (id: string, value: number) => void;
+  onRemoveSlider: (id: string) => void;
 };
 
-export function IdeaPanel({ state, onSubmitIdea, onUpdateSlider }: Props) {
+export function IdeaPanel({ state, onSubmitIdea, onUpdateSlider, onRemoveSlider }: Props) {
   const [idea, setIdea] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,8 +40,15 @@ export function IdeaPanel({ state, onSubmitIdea, onUpdateSlider }: Props) {
             <div className="text-sm text-gray-500 dark:text-gray-400">No sliders yet. Submit an idea to get started.</div>
           )}
           {state.sliders.map((s) => (
-            <div key={s.id} className="rounded-lg border border-gray-200 dark:border-neutral-800 p-3">
-              <div className="flex justify-between items-center mb-2 text-sm">
+            <div key={s.id} className="relative rounded-lg border border-gray-200 dark:border-neutral-800 p-3">
+              <button
+                onClick={() => onRemoveSlider(s.id)}
+                className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-100 dark:bg-neutral-800 hover:bg-red-100 dark:hover:bg-red-900 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-xs"
+                title="Remove steering vector"
+              >
+                ×
+              </button>
+              <div className="flex justify-between items-center mb-2 text-sm pr-6">
                 <div className="font-medium">{s.label}</div>
                 <input
                   type="number"

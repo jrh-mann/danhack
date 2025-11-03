@@ -70,6 +70,13 @@ export function App() {
     }));
   };
 
+  const removeSlider = (id: string) => {
+    setState((s) => ({
+      ...s,
+      sliders: s.sliders.filter((sl) => sl.id !== id)
+    }));
+  };
+
   return (
     <div className="h-full bg-white dark:bg-neutral-950">
       <header className="sticky top-0 z-10 border-b border-gray-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-950/80 backdrop-blur">
@@ -105,7 +112,7 @@ export function App() {
           />
         </div>
         <div className="p-4 lg:p-6 overflow-auto">
-          <IdeaPanel state={state} onSubmitIdea={handleSubmitIdea} onUpdateSlider={updateSlider} />
+          <IdeaPanel state={state} onSubmitIdea={handleSubmitIdea} onUpdateSlider={updateSlider} onRemoveSlider={removeSlider} />
         </div>
       </main>
     </div>

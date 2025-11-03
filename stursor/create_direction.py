@@ -14,9 +14,9 @@ def create_direction(
     api_client: Response,
     layer: int = 14,
     layers: Optional[List[int]] = None,
-    n_examples: int = 10,
+    n_examples: int = 4,
     api_model: str = "openai/gpt-4o-mini",
-    max_tokens: int = 100,
+    max_tokens: int = 150,
     temperature: float = 0.8,
     verbose: bool = True
 ) -> Tuple[torch.Tensor, dict]:
@@ -63,15 +63,15 @@ def create_direction(
     if verbose:
         print("Step 1: Generating positive and negative examples in one API call...")
     
-    combined_prompt = f"""I am running a steering vector experiment to teach a model about the concept: "{concept}".
+    combined_prompt = f"""I am running an app that allows you to steer the behaviour of a model based on an arbitrary prompt.
+    
+    The prompt given was "{concept}". 
 
-Your task: Generate {n_examples} pairs of contrasting text examples.
+Your task: Generate {n_examples} pairs of contrasting text examples that should elicit the direction described by the prompt, be intelligent. I take mean diff between these and use that as a steering vector. Aim for samples around 100 tokens that can be inserted as a user prompt into the chat template.
 
 For each pair, provide:
 1. A POSITIVE example that clearly demonstrates {concept}
 2. A NEGATIVE example that does NOT demonstrate {concept} (should be neutral or opposite)
-
-Each example should be 1-2 sentences long and representative.
 
 Use this EXACT format:
 
@@ -144,6 +144,7 @@ Generate {n_examples} high-quality contrasting examples now:"""
     positive_activations_by_layer = {layer_idx: [] for layer_idx in target_layers}
     
     for example in positive_examples:
+        example = model.model.tokenizer.apply_chat_template([{"role": "user", "content": example}], tokenize=False, add_generation_prompt=True)
         # Tokenize the example
         inputs = model.model.tokenizer(example, return_tensors="pt").to(model.device)
         
@@ -152,13 +153,33 @@ Generate {n_examples} high-quality contrasting examples now:"""
             outputs = model.model._model(**inputs, output_hidden_states=True)
             
             # Extract activations for each target layer
+            # output_hidden_states returns tuple: (embeddings, layer0, layer1, ..., layerN-1)
+            # So layer N is at index N+1 (because index 0 is embeddings)
+            num_hidden_states = len(outputs.hidden_states)
+            
             for layer_idx in target_layers:
-                # output_hidden_states returns tuple: (embeddings, layer1, layer2, ..., layerN)
-                # So layer N is at index N+1 (because index 0 is embeddings)
+                # Check bounds: layer_idx should be < num_layers
+                # hidden_states has shape: [embeddings, layer0, ..., layerN-1] = N+1 elements for N layers
+                # So maximum valid layer_idx is num_hidden_states - 2 (since index 0 is embeddings)
+                if layer_idx + 1 >= num_hidden_states:
+                    raise ValueError(
+                        f"Layer {layer_idx} is out of bounds. "
+                        f"Model has {num_hidden_states - 1} layers (0-{num_hidden_states - 2}), "
+                        f"but requested layer {layer_idx}. "
+                        f"hidden_states has {num_hidden_states} elements (embeddings + {num_hidden_states - 1} layers)."
+                    )
+                
                 hidden_states = outputs.hidden_states[layer_idx + 1]  # Shape: [batch, seq, hidden]
                 
                 # Mean across sequence dimension
-                mean_act = hidden_states.mean(dim=1).squeeze(0)  # Shape: [hidden_dim]
+                # hidden_states.mean(dim=1) gives [batch, hidden_dim]
+                # For batch=1, squeeze(0) removes batch dimension to get [hidden_dim]
+                mean_act = hidden_states.mean(dim=1)  # Shape: [batch, hidden_dim]
+                if mean_act.shape[0] == 1:
+                    mean_act = mean_act.squeeze(0)  # Shape: [hidden_dim]
+                else:
+                    # If batch > 1, take mean across batch too
+                    mean_act = mean_act.mean(dim=0)  # Shape: [hidden_dim]
                 positive_activations_by_layer[layer_idx].append(mean_act.cpu())
     
     # Compute mean for each layer
@@ -177,6 +198,7 @@ Generate {n_examples} high-quality contrasting examples now:"""
     negative_activations_by_layer = {layer_idx: [] for layer_idx in target_layers}
     
     for example in negative_examples:
+        example = model.model.tokenizer.apply_chat_template([{"role": "user", "content": example}], tokenize=False, add_generation_prompt=True)
         # Tokenize the example
         inputs = model.model.tokenizer(example, return_tensors="pt").to(model.device)
         
@@ -211,10 +233,18 @@ Generate {n_examples} high-quality contrasting examples now:"""
         steering_vector = positive_means[layer_idx] - negative_means[layer_idx]
         
         # Store original norm
-        original_norms[layer_idx] = steering_vector.norm().item()
+        norm = steering_vector.norm().item()
+        original_norms[layer_idx] = norm
         
         # Normalize the vector (L2 normalization)
-        steering_vector = steering_vector / steering_vector.norm()
+        # Check for zero norm to avoid division by zero
+        if norm < 1e-8:
+            if verbose:
+                print(f"⚠️  Warning: Layer {layer_idx} has zero steering vector (identical positive/negative means). Using zero vector.")
+            # Use zero vector if norm is too small
+            steering_vector = torch.zeros_like(steering_vector)
+        else:
+            steering_vector = steering_vector / norm
         
         # Reshape for model compatibility: (1, 1, hidden_dim)
         steering_vector = steering_vector.unsqueeze(0).unsqueeze(0)
