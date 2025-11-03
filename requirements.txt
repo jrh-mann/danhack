@@ -4,3 +4,4 @@ matplotlib
 openai
 numpy
 hf_transfer
+aiohttp
